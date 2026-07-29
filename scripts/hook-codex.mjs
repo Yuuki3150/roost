@@ -8,7 +8,7 @@
 // Codex chains a previously configured notify target itself via
 // `--previous-notify`, so this script does not need to forward anything.
 
-import { labelFor, parseJson, postEvent, terminalForSession, truncate } from "./lib/bridge.mjs";
+import { labelFor, parseJson, postEvent, terminalRef, truncate } from "./lib/bridge.mjs";
 import { s } from "./lib/strings.mjs";
 
 function main() {
@@ -23,7 +23,7 @@ function main() {
     session_id: `codex-${sessionId}`,
     tool: "codex",
     label: labelFor(cwd, sessionId),
-    terminal: terminalForSession(`codex-${sessionId}`),
+    terminal: terminalRef(),
   };
 
   if (payload.type === "agent-turn-complete") {

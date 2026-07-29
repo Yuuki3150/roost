@@ -148,6 +148,19 @@ fn handle_event(body: &str, app: &AppHandle, state: &Arc<AppState>) -> (u16, ser
         updated_at: now_ms(),
     };
 
+    // Bridges report the process they happened to run under, which is a
+    // windowless shell. Resolving to the window-owning ancestor has to happen
+    // now, while that tree is still alive — once the turn ends there is nothing
+    // left to walk, and the row would be unjumpable.
+    if let Some(terminal) = session.terminal.as_mut() {
+        if let Some(pid) = terminal.pid {
+            let resolved = crate::winfocus::resolve_host_pid(pid);
+            terminal.pid = Some(resolved);
+            terminal.window_title = crate::winfocus::window_title_for_pid(resolved)
+                .or_else(|| terminal.window_title.take());
+        }
+    }
+
     {
         let mut sessions = state.sessions.lock().unwrap();
 

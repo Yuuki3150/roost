@@ -8,8 +8,7 @@
 // Everything is fail-quiet by design: a bridge must never break the agent it is
 // observing, so errors are swallowed and calls time out fast.
 
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import os from "node:os";
@@ -17,28 +16,11 @@ import os from "node:os";
 const STATE_DIR = path.join(os.homedir(), "AppData", "Local", "Roost");
 const PORT_FILE = path.join(STATE_DIR, "port.txt");
 const APPROVAL_FILE = path.join(STATE_DIR, "approval-mode.json");
-const CACHE_DIR = path.join(STATE_DIR, "sessions");
 
 const EVENT_TIMEOUT_MS = 800;
 /// Must exceed the server's own 300s wait so we receive its default-deny
 /// answer rather than tearing the socket down first.
 export const PERMISSION_TIMEOUT_MS = 305_000;
-
-/// Processes that own a window worth jumping back to. Terminals for CLI agents,
-/// plus editors that host an agent directly.
-const HOST_PROCESSES = new Set([
-  "WindowsTerminal.exe",
-  "cmd.exe",
-  "powershell.exe",
-  "pwsh.exe",
-  "ConEmu64.exe",
-  "ConEmu.exe",
-  "wezterm-gui.exe",
-  "alacritty.exe",
-  "mintty.exe",
-  "Cursor.exe",
-  "Code.exe",
-]);
 
 export function getPort() {
   try {
@@ -85,44 +67,17 @@ export function labelFor(cwd, sessionId) {
   return String(sessionId ?? "").slice(0, 8) || "session";
 }
 
-function resolveHostPid(startPid) {
-  let pid = startPid;
-  for (let i = 0; i < 8; i++) {
-    let info;
-    try {
-      const out = execSync(
-        `powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \\"ProcessId=${pid}\\" | Select-Object Name,ParentProcessId | ConvertTo-Json -Compress"`,
-        { encoding: "utf8", timeout: 2000, windowsHide: true },
-      );
-      info = JSON.parse(out);
-    } catch {
-      break;
-    }
-    if (!info || !info.Name) break;
-    if (HOST_PROCESSES.has(info.Name)) return pid;
-    if (!info.ParentProcessId || info.ParentProcessId === pid) break;
-    pid = info.ParentProcessId;
-  }
-  return startPid;
-}
-
-/// Walking the process tree costs a PowerShell round-trip, so the answer is
-/// cached per session and reused by every later event for that session.
-export function terminalForSession(cacheKey) {
-  const file = path.join(CACHE_DIR, `${cacheKey}.json`);
-  try {
-    return JSON.parse(readFileSync(file, "utf8"));
-  } catch {
-    // not cached yet — resolve below
-  }
-  const terminal = { app: null, pid: resolveHostPid(process.ppid), window_title: null };
-  try {
-    mkdirSync(CACHE_DIR, { recursive: true });
-    writeFileSync(file, JSON.stringify(terminal));
-  } catch {
-    // best-effort cache only
-  }
-  return terminal;
+/// Reports the process this bridge is running under. That process is never the
+/// one worth jumping to — hooks run in a windowless shell — so the overlay walks
+/// up from here to whichever ancestor actually owns a window.
+///
+/// Resolving on the Rust side rather than here is what makes the jump reliable:
+/// it can ask Windows which process owns a visible window, while a script can
+/// only guess from process names. Guessing picked the hook's own `powershell.exe`
+/// and produced a row that silently did nothing when clicked. It also drops a
+/// PowerShell round-trip out of the hook's hot path.
+export function terminalRef() {
+  return { app: null, pid: process.ppid ?? null, window_title: null };
 }
 
 /// Fire-and-forget status update. Never blocks the agent.

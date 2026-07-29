@@ -9,7 +9,7 @@ import {
   parseJson,
   postEvent,
   readStdin,
-  terminalForSession,
+  terminalRef,
   truncate,
 } from "./lib/bridge.mjs";
 import { s } from "./lib/strings.mjs";
@@ -24,7 +24,7 @@ function main() {
     session_id: sessionId,
     tool: "claude",
     label: labelFor(payload.cwd, sessionId),
-    terminal: terminalForSession(sessionId),
+    terminal: terminalRef(),
   };
 
   switch (EVENT) {

@@ -22,7 +22,7 @@ import {
   postEvent,
   readStdin,
   requestPermission,
-  terminalForSession,
+  terminalRef,
   truncate,
 } from "./lib/bridge.mjs";
 import { s } from "./lib/strings.mjs";
@@ -37,7 +37,7 @@ function baseFor(payload) {
     session_id: key,
     tool: "gemini",
     label: labelFor(payload.cwd, sessionId),
-    terminal: terminalForSession(key),
+    terminal: terminalRef(),
   };
 }
 

@@ -13,7 +13,7 @@ import {
   parseJson,
   postEvent,
   readStdin,
-  terminalForSession,
+  terminalRef,
   truncate,
 } from "./lib/bridge.mjs";
 import { s } from "./lib/strings.mjs";
@@ -44,7 +44,7 @@ function main() {
     label: labelFor(payload.cwd, sessionId),
     status: "waiting_input",
     message: question.header ?? s("question"),
-    terminal: terminalForSession(sessionId),
+    terminal: terminalRef(),
     question,
   });
 }

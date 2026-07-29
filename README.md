@@ -79,7 +79,7 @@ There's also a tray item to turn approval mode off, so you can never lock yourse
 
 ## Known limitations
 
-- **Jumping back focuses the terminal window, not the tab.** Windows Terminal shares one process across tabs, so there's no reliable way to tell them apart. The session row's tooltip shows the window title as a hint.
+- **Jumping back focuses the window, not the tab.** Windows Terminal shares one process across tabs, so there's no reliable way to tell them apart. The session row's tooltip shows the window title as a hint. (The window itself is found by walking up from the hook's process to the first ancestor that actually owns a visible one — which is why it also works when the agent lives inside a GUI app like Cursor or the Claude desktop client.)
 - **Cursor and Gemini haven't been tested against the real thing** — neither was installed on the development machine. Both are implemented from official docs and covered by [`scripts/verify-bridges.mjs`](scripts/verify-bridges.mjs) against stub payloads. Reports welcome.
 - **Codex reports at turn boundaries only.** Its `notify` mechanism has no per-tool-call event.
 - **Answering questions still happens in the terminal.** Roost shows `AskUserQuestion` prompts and their options, but answering from the panel would require synthesising keystrokes into whatever window happens to be focused. Not worth the risk of typing into the wrong app.

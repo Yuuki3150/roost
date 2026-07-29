@@ -19,7 +19,7 @@ import {
   postEvent,
   readStdin,
   requestPermission,
-  terminalForSession,
+  terminalRef,
   truncate,
 } from "./lib/bridge.mjs";
 import { s } from "./lib/strings.mjs";
@@ -57,7 +57,7 @@ function baseFor(payload) {
     session_id: key,
     tool: "cursor",
     label: labelFor(workspaceOf(payload), sessionId),
-    terminal: terminalForSession(key),
+    terminal: terminalRef(),
   };
 }
 
