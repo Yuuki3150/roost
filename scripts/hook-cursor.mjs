@@ -22,6 +22,7 @@ import {
   terminalForSession,
   truncate,
 } from "./lib/bridge.mjs";
+import { s } from "./lib/strings.mjs";
 
 const MODE = process.argv[2] || "status";
 const EVENT = process.argv[3] || "";
@@ -64,34 +65,34 @@ function runStatus(payload) {
   const base = baseFor(payload);
   switch (EVENT) {
     case "sessionStart":
-      postEvent({ ...base, status: "running", message: "セッション開始" });
+      postEvent({ ...base, status: "running", message: s("sessionStart") });
       break;
     case "beforeSubmitPrompt":
       postEvent({
         ...base,
         status: "running",
-        message: truncate(pick(payload, "prompt", "text"), 60) || "考え中…",
+        message: truncate(pick(payload, "prompt", "text"), 60) || s("thinking"),
       });
       break;
     case "preToolUse":
       postEvent({
         ...base,
         status: "running",
-        message: `${pick(payload, "tool_name", "toolName", "tool") ?? "ツール"} を実行中`,
+        message: s("runningTool", pick(payload, "tool_name", "toolName", "tool") ?? s("tool")),
       });
       break;
     case "beforeShellExecution":
       postEvent({
         ...base,
         status: "running",
-        message: truncate(pick(payload, "command"), 60) || "コマンド実行中",
+        message: truncate(pick(payload, "command"), 60) || s("runningCommand"),
       });
       break;
     case "stop":
-      postEvent({ ...base, status: "done", message: "完了" });
+      postEvent({ ...base, status: "done", message: s("done") });
       break;
     case "sessionEnd":
-      postEvent({ ...base, status: "closed", message: "終了" });
+      postEvent({ ...base, status: "closed", message: s("ended") });
       break;
     default:
       break;
@@ -109,7 +110,7 @@ async function runApprove(payload) {
     tool: "cursor",
     label: base.label,
     tool_name: pick(payload, "tool_name", "toolName") ?? "Shell",
-    description: command || "コマンド実行",
+    description: command || s("command"),
   });
 
   // Only a real answer decides. Anything else defers to Cursor's own prompt —
@@ -120,15 +121,15 @@ async function runApprove(payload) {
     process.stdout.write(
       JSON.stringify({
         permission: "deny",
-        user_message: "Roost で拒否しました",
-        agent_message: "The user denied this command from Roost.",
+        user_message: s("denied"),
+        agent_message: s("deniedByUser"),
       }),
     );
   } else {
     process.stdout.write(
       JSON.stringify({
         permission: "ask",
-        user_message: "Roost に接続できなかったため、こちらで確認してください",
+        user_message: s("unreachableAsk"),
       }),
     );
   }

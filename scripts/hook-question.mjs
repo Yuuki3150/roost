@@ -16,6 +16,7 @@ import {
   terminalForSession,
   truncate,
 } from "./lib/bridge.mjs";
+import { s } from "./lib/strings.mjs";
 
 function firstQuestion(toolInput) {
   const q = toolInput?.questions?.[0];
@@ -42,7 +43,7 @@ function main() {
     tool: "claude",
     label: labelFor(payload.cwd, sessionId),
     status: "waiting_input",
-    message: question.header ?? "質問",
+    message: question.header ?? s("question"),
     terminal: terminalForSession(sessionId),
     question,
   });

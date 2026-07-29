@@ -9,6 +9,7 @@
 // `--previous-notify`, so this script does not need to forward anything.
 
 import { labelFor, parseJson, postEvent, terminalForSession, truncate } from "./lib/bridge.mjs";
+import { s } from "./lib/strings.mjs";
 
 function main() {
   const payload = parseJson(process.argv[2]);
@@ -29,7 +30,7 @@ function main() {
     postEvent({
       ...base,
       status: "waiting_input",
-      message: truncate(payload["last-assistant-message"], 80) || "確認待ち",
+      message: truncate(payload["last-assistant-message"], 80) || s("waiting"),
     });
   } else {
     postEvent({ ...base, status: "running", message: truncate(payload.type, 60) });

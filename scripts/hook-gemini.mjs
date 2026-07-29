@@ -25,6 +25,7 @@ import {
   terminalForSession,
   truncate,
 } from "./lib/bridge.mjs";
+import { s } from "./lib/strings.mjs";
 
 const MODE = process.argv[2] || "status";
 const EVENT = process.argv[3] || "";
@@ -44,34 +45,34 @@ function runStatus(payload) {
   const base = baseFor(payload);
   switch (EVENT) {
     case "SessionStart":
-      postEvent({ ...base, status: "running", message: "セッション開始" });
+      postEvent({ ...base, status: "running", message: s("sessionStart") });
       break;
     case "BeforeAgent":
       postEvent({
         ...base,
         status: "running",
-        message: truncate(payload.prompt, 60) || "考え中…",
+        message: truncate(payload.prompt, 60) || s("thinking"),
       });
       break;
     case "BeforeTool":
       postEvent({
         ...base,
         status: "running",
-        message: `${payload.tool_name ?? "ツール"} を実行中`,
+        message: s("runningTool", payload.tool_name ?? s("tool")),
       });
       break;
     case "Notification":
       postEvent({
         ...base,
         status: "waiting_input",
-        message: truncate(payload.message, 80) || "確認待ち",
+        message: truncate(payload.message, 80) || s("waiting"),
       });
       break;
     case "AfterAgent":
-      postEvent({ ...base, status: "done", message: "完了" });
+      postEvent({ ...base, status: "done", message: s("done") });
       break;
     case "SessionEnd":
-      postEvent({ ...base, status: "closed", message: "終了" });
+      postEvent({ ...base, status: "closed", message: s("ended") });
       break;
     default:
       break;
@@ -83,7 +84,7 @@ async function runApprove(payload) {
   if (!approvalModeEnabled()) return;
 
   const base = baseFor(payload);
-  const toolName = payload.tool_name || "ツール";
+  const toolName = payload.tool_name || s("tool");
   const decision = await requestPermission({
     session_id: base.session_id,
     tool: "gemini",
@@ -93,9 +94,9 @@ async function runApprove(payload) {
   });
 
   if (decision === "allow") {
-    process.stdout.write(JSON.stringify({ decision: "allow", reason: "Roost で承認" }));
+    process.stdout.write(JSON.stringify({ decision: "allow", reason: s("approved") }));
   } else if (decision === "deny") {
-    process.stdout.write(JSON.stringify({ decision: "deny", reason: "Roost で拒否" }));
+    process.stdout.write(JSON.stringify({ decision: "deny", reason: s("denied") }));
   }
   // No answer → print nothing. Gemini has no "ask" decision, so staying silent
   // is what hands control back to its own prompt.

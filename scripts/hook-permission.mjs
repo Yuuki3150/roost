@@ -17,6 +17,7 @@ import {
   readStdin,
   requestPermission,
 } from "./lib/bridge.mjs";
+import { s } from "./lib/strings.mjs";
 
 function decide(decision, reason) {
   process.stdout.write(
@@ -35,7 +36,7 @@ async function main() {
 
   const payload = parseJson(readStdin());
   const sessionId = payload.session_id || `unknown-${process.ppid}`;
-  const toolName = payload.tool_name || "ツール";
+  const toolName = payload.tool_name || s("tool");
 
   const decision = await requestPermission({
     session_id: sessionId,
@@ -48,9 +49,9 @@ async function main() {
   // Anything other than a real answer falls back to Claude Code's own prompt.
   // Silently allowing would make approval mode a no-op exactly when the user
   // believes it is protecting them.
-  if (decision === "allow") decide("allow", "Roost で承認");
-  else if (decision === "deny") decide("deny", "Roost で拒否");
-  else decide("ask", "Roost に接続できませんでした");
+  if (decision === "allow") decide("allow", s("approved"));
+  else if (decision === "deny") decide("deny", s("denied"));
+  else decide("ask", s("unreachable"));
 }
 
 main();

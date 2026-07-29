@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { cueForStatus, isMuted, playCue, setMuted } from "./sounds";
+import { t, windowLabel } from "./i18n";
 import "./App.css";
 
 type QuestionInfo = {
@@ -97,13 +98,13 @@ function elapsed(updatedAt: number) {
 function countdown(resetsAtMs: number | null) {
   if (!resetsAtMs) return "";
   const ms = resetsAtMs - Date.now();
-  if (Number.isNaN(ms) || ms <= 0) return "まもなく";
+  if (Number.isNaN(ms) || ms <= 0) return t("soon");
   const mins = Math.floor(ms / 60000);
   const hours = Math.floor(mins / 60);
   const days = Math.floor(hours / 24);
-  if (days > 0) return `${days}日${hours % 24}時間後`;
-  if (hours > 0) return `${hours}時間${mins % 60}分後`;
-  return `${mins}分後`;
+  if (days > 0) return t("days")(days, hours % 24);
+  if (hours > 0) return t("hours")(hours, mins % 60);
+  return t("minutes")(mins);
 }
 
 function usageSeverity(utilization: number) {
@@ -122,17 +123,17 @@ function isStalled(session: AgentSession, afterMinutes: number) {
 function statusLabel(status: string) {
   switch (status) {
     case "running":
-      return "実行中";
+      return t("running");
     case "waiting_permission":
-      return "承認待ち";
+      return t("waitingPermission");
     case "waiting_input":
-      return "入力待ち";
+      return t("waitingInput");
     case "error":
-      return "エラー";
+      return t("error");
     case "done":
-      return "完了";
+      return t("done");
     case "closed":
-      return "終了";
+      return t("closed");
     default:
       return status;
   }
@@ -295,7 +296,7 @@ export default function App() {
     >
       <div className="capsule-header">
         <span className="dot-row">
-          {sessions.length === 0 && <span className="idle-text">Vibe Island</span>}
+          {sessions.length === 0 && <span className="idle-text">{t("idle")}</span>}
           {sessions.map((s) => (
             <span
               key={s.session_id}
@@ -322,10 +323,10 @@ export default function App() {
               <div className="perm-desc">{p.description}</div>
               <div className="perm-actions">
                 <button className="deny" onClick={() => respond(p.id, "deny")}>
-                  拒否
+                  {t("deny")}
                 </button>
                 <button className="allow" onClick={() => respond(p.id, "allow")}>
-                  許可
+                  {t("allow")}
                 </button>
               </div>
             </div>
@@ -335,7 +336,7 @@ export default function App() {
             <div key={`${a.tool}:${a.label}`} className="usage-alert">
               <span className="tool-dot" style={{ background: toolColor(a.tool) }} />
               <span className="usage-alert-text">
-                {TOOL_LABELS[a.tool] ?? a.tool} の{a.label}枠が{Math.round(a.utilization)}%です
+                {t("usageAlert")(TOOL_LABELS[a.tool] ?? a.tool, windowLabel(a.label), Math.round(a.utilization))}
               </span>
               <button
                 className="usage-alert-close"
@@ -351,7 +352,7 @@ export default function App() {
           ))}
 
           {sessions.length === 0 && permissions.length === 0 && (
-            <div className="empty">エージェントは動いていません</div>
+            <div className="empty">{t("noAgents")}</div>
           )}
 
           {sessions.map((s) => (
@@ -371,8 +372,8 @@ export default function App() {
                 </div>
                 <div className="session-meta">
                   {isStalled(s, settings?.stall_after_minutes ?? 0) ? (
-                    <span className="status-pill status-stalled" title="長時間更新がありません">
-                      停滞
+                    <span className="status-pill status-stalled" title={t("stalledHint")}>
+                      {t("stalled")}
                     </span>
                   ) : (
                     <span className={`status-pill status-${s.status}`}>{statusLabel(s.status)}</span>
@@ -392,7 +393,7 @@ export default function App() {
                       </span>
                     ))}
                   </div>
-                  <div className="question-hint">クリックでターミナルへ移動して回答</div>
+                  <div className="question-hint">{t("questionHint")}</div>
                 </div>
               )}
             </div>
@@ -412,7 +413,7 @@ export default function App() {
                       key={win.label}
                       className={`usage-row severity-${usageSeverity(win.utilization)}`}
                     >
-                      <span className="usage-label">{win.label}</span>
+                      <span className="usage-label">{windowLabel(win.label)}</span>
                       <div className="usage-bar">
                         <div
                           className="usage-bar-fill"
@@ -420,7 +421,7 @@ export default function App() {
                         />
                       </div>
                       <span className="usage-percent">{Math.round(win.utilization)}%</span>
-                      <span className="usage-reset">{countdown(win.resets_at_ms)}リセット</span>
+                      <span className="usage-reset">{t("resetsIn")(countdown(win.resets_at_ms))}</span>
                     </div>
                   ))}
                 </div>
@@ -432,22 +433,22 @@ export default function App() {
             <button
               className={`control-toggle ${approvalMode ? "on" : ""} ${confirmApproval ? "pending" : ""}`}
               onClick={onApprovalButton}
-              title="ONにすると全ツール実行前にここで承認が必要になります"
+              title={t("approvalHint")}
             >
-              承認モード {approvalMode ? "ON" : "OFF"}
+              {t("approvalMode")} {approvalMode ? "ON" : "OFF"}
             </button>
             {confirmApproval && !approvalMode && (
               <button className="control-toggle confirm" onClick={() => applyApprovalMode(true)}>
-                ONにする
+                {t("turnOn")}
               </button>
             )}
-            <button className="control-toggle" onClick={toggleMute} title="サウンド通知">
+            <button className="control-toggle" onClick={toggleMute} title={t("sound")}>
               {muted ? "🔇" : "🔊"}
             </button>
             <button
               className={`control-toggle ${showSettings ? "on" : ""}`}
               onClick={() => setShowSettings((v) => !v)}
-              title="設定"
+              title={t("settings")}
             >
               ⚙
             </button>
@@ -456,7 +457,7 @@ export default function App() {
           {showSettings && settings && (
             <div className="settings-panel">
               <label className="setting-row">
-                <span className="setting-label">幅</span>
+                <span className="setting-label">{t("width")}</span>
                 <input
                   type="range"
                   min={280}
@@ -469,13 +470,13 @@ export default function App() {
               </label>
 
               <div className="setting-row">
-                <span className="setting-label">位置</span>
+                <span className="setting-label">{t("position")}</span>
                 <div className="setting-segments">
                   {(
                     [
-                      ["left", "左"],
-                      ["center", "中央"],
-                      ["right", "右"],
+                      ["left", t("left")],
+                      ["center", t("center")],
+                      ["right", t("right")],
                     ] as const
                   ).map(([value, text]) => (
                     <button
@@ -490,7 +491,7 @@ export default function App() {
               </div>
 
               <label className="setting-row">
-                <span className="setting-label">上余白</span>
+                <span className="setting-label">{t("topMargin")}</span>
                 <input
                   type="range"
                   min={0}
@@ -504,13 +505,13 @@ export default function App() {
 
               {monitors.length > 1 && (
                 <label className="setting-row">
-                  <span className="setting-label">画面</span>
+                  <span className="setting-label">{t("display")}</span>
                   <select
                     className="setting-select"
                     value={settings.monitor}
                     onChange={(e) => updateSettings({ monitor: e.target.value })}
                   >
-                    <option value="">メイン画面</option>
+                    <option value="">{t("mainDisplay")}</option>
                     {monitors.map((m) => (
                       <option key={m} value={m}>
                         {m}
@@ -521,7 +522,7 @@ export default function App() {
               )}
 
               <label className="setting-row">
-                <span className="setting-label">ホットキー</span>
+                <span className="setting-label">{t("hotkey")}</span>
                 <select
                   className="setting-select"
                   value={settings.hotkey}
@@ -529,14 +530,14 @@ export default function App() {
                 >
                   {HOTKEY_CHOICES.map((k) => (
                     <option key={k || "none"} value={k}>
-                      {k || "なし"}
+                      {k || t("none")}
                     </option>
                   ))}
                 </select>
               </label>
 
               <label className="setting-row">
-                <span className="setting-label">停滞警告</span>
+                <span className="setting-label">{t("stallAfter")}</span>
                 <input
                   type="range"
                   min={0}
@@ -546,7 +547,7 @@ export default function App() {
                   onChange={(e) => updateSettings({ stall_after_minutes: Number(e.target.value) })}
                 />
                 <span className="setting-value">
-                  {settings.stall_after_minutes === 0 ? "なし" : `${settings.stall_after_minutes}分`}
+                  {settings.stall_after_minutes === 0 ? t("none") : `${settings.stall_after_minutes}${t("minutesShort")}`}
                 </span>
               </label>
 
@@ -556,12 +557,12 @@ export default function App() {
                   checked={settings.collapse_on_leave}
                   onChange={(e) => updateSettings({ collapse_on_leave: e.target.checked })}
                 />
-                <span className="setting-label">マウスが離れたら折りたたむ</span>
+                <span className="setting-label">{t("collapseOnLeave")}</span>
               </label>
 
               <label className="setting-row checkbox">
                 <input type="checkbox" checked={autostart} onChange={toggleAutostart} />
-                <span className="setting-label">Windows起動時に自動で起動する</span>
+                <span className="setting-label">{t("autostart")}</span>
               </label>
             </div>
           )}

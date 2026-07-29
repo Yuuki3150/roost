@@ -8,6 +8,14 @@ Windows only. Built with Tauri (Rust + React), ~11 MB installed.
 
 [日本語版 README](README.ja.md)
 
+<img src="docs/panel.png" width="400" alt="Roost expanded, showing four agents, a pending question, and usage quotas">
+
+It sits out of the way until you look at it:
+
+<img src="docs/collapsed.png" width="152" alt="Roost collapsed into a small pill">
+
+A dot per agent, coloured by tool. Hover to get the panel above.
+
 ## Why
 
 [Vibe Island](https://vibeisland.app) does this beautifully on macOS. There was no Windows equivalent, so this is one — with its own take on a few things:
@@ -39,6 +47,8 @@ npm run setup -- --remove    # take it back out
 This edits `~/.claude/settings.json`, `~/.cursor/hooks.json` and `~/.gemini/settings.json` in place, keeping your existing config and backing up the original as `*.roost-backup`. Codex CLI needs one line pasted into `~/.codex/config.toml`; the script prints it.
 
 Restart the agent (or reopen Cursor) afterwards.
+
+The UI follows your OS language — English everywhere except Japanese Windows. Set `ROOST_LANG=en` or `ROOST_LANG=ja` to override.
 
 ## What it reads, and what leaves your machine
 
