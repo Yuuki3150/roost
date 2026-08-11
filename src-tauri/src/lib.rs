@@ -7,7 +7,7 @@ use state::{AgentSession, AppState, PermissionRequest, Settings};
 use std::sync::Arc;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
-use tauri::{Emitter, Manager, WebviewWindow};
+use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
 use usage::{UsageInfo, UsageState};
 
 #[tauri::command]
@@ -35,6 +35,37 @@ fn respond_permission(id: String, decision: String, state: tauri::State<Arc<AppS
     } else {
         false
     }
+}
+
+/// Drops one session from the list. Deliberate and per-row, so unlike the
+/// automatic hiding it will also clear a session that still shows a question —
+/// the user is saying they're done with it.
+///
+/// The session has to go from the backend, not just the UI: the next broadcast
+/// rebuilds the list from here and would bring a UI-only dismissal straight
+/// back. If the agent reports in again under the same id, the row returns, which
+/// is what you want — that session resumed.
+#[tauri::command]
+fn dismiss_session(session_id: String, app: AppHandle, state: tauri::State<Arc<AppState>>) -> bool {
+    let removed = {
+        let mut sessions = state.sessions.lock().unwrap();
+        sessions.remove(&session_id).is_some()
+    };
+    if removed {
+        server::broadcast_sessions(&app, &state);
+    }
+    removed
+}
+
+/// Clears every finished session in one go, skipping any that still owe the
+/// user an answer. Those stay until dismissed individually.
+#[tauri::command]
+fn clear_finished(app: AppHandle, state: tauri::State<Arc<AppState>>) -> usize {
+    let removed = state::clear_finished(&mut state.sessions.lock().unwrap());
+    if removed > 0 {
+        server::broadcast_sessions(&app, &state);
+    }
+    removed
 }
 
 #[tauri::command]
@@ -232,6 +263,8 @@ pub fn run() {
             get_pending_permissions,
             respond_permission,
             focus_terminal,
+            dismiss_session,
+            clear_finished,
             toggle_overlay,
             get_usage,
             get_window_title,

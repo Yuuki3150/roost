@@ -414,6 +414,31 @@ body,
   opacity: 0.85;
 }
 
+/* Kept out of the layout until the row is hovered, so a list of finished
+   sessions doesn't read as a column of close buttons. Width is reserved either
+   way so revealing it can't shift the row's contents. */
+.session-dismiss {
+  flex-shrink: 0;
+  width: 16px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 11px;
+  font-family: inherit;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  visibility: hidden;
+}
+
+.session-row:hover .session-dismiss {
+  visibility: visible;
+}
+
+.session-dismiss:hover {
+  color: #fff;
+}
+
 .question-card {
   margin-left: 19px;
   padding: 8px 10px;
@@ -469,8 +494,12 @@ body,
   color: rgba(255, 255, 255, 0.35);
 }
 
+/* Wraps because the row grows conditionally — the confirm step and the
+   clear-finished button both come and go — and at the 280px minimum width a
+   fixed row would push the settings button off the edge. */
 .controls {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   padding: 8px 10px 0;
@@ -479,6 +508,7 @@ body,
 }
 
 .control-toggle {
+  white-space: nowrap;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
   padding: 4px 10px;

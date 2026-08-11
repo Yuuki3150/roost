@@ -22,7 +22,7 @@ A dot per agent, coloured by tool. Hover to get the panel above.
 
 - **Four agents, one panel.** Claude Code, Codex CLI, Cursor (the GUI IDE, not just the CLI), and Gemini CLI.
 - **Usage quotas for Claude and Codex**, including the reset countdown.
-- **Session history.** Finished sessions stay listed; anything still waiting on an answer is kept regardless of age, so you can leave and come back.
+- **Session history.** Finished sessions stay listed; anything still waiting on an answer is kept regardless of age, so you can leave and come back. Finished rows fade out after five minutes (configurable), or you can dismiss them one at a time or all at once — but never one that still has a question on it.
 - **Approval mode is opt-in.** Off by default, because interrupting an autonomous agent on every tool call defeats the point of running one.
 
 ## Install

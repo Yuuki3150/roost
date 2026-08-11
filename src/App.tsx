@@ -53,6 +53,7 @@ type Settings = {
   hotkey: string;
   usage_alert_at: number[];
   stall_after_minutes: number;
+  hide_finished_after_minutes: number;
 };
 
 type UsageAlertEvent = {
@@ -120,6 +121,15 @@ function isStalled(session: AgentSession, afterMinutes: number) {
   return Date.now() - session.updated_at > afterMinutes * 60_000;
 }
 
+/// A finished session with nothing left for the user to do. Only these fade out
+/// on their own — anything still holding a question stays until it's dismissed
+/// by hand, so leaving the desk mid-question never loses what was being asked.
+function isExpired(session: AgentSession, afterMinutes: number) {
+  if (afterMinutes <= 0) return false;
+  if (!isFinished(session.status) || session.question) return false;
+  return Date.now() - session.updated_at > afterMinutes * 60_000;
+}
+
 function statusLabel(status: string) {
   switch (status) {
     case "running":
@@ -164,6 +174,11 @@ export default function App() {
   const [confirmApproval, setConfirmApproval] = useState(false);
   const [, forceTick] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
+  // Last status seen per session, so cues fire on a real transition rather than
+  // on every broadcast. Broadcasts carry the whole list, so without this an
+  // unrelated event — or dismissing a row — would re-announce every session
+  // that happens to be waiting.
+  const lastStatuses = useRef(new Map<string, string>());
 
   // The panel stays open while it holds something the user must act on, so a
   // permission prompt can't vanish the moment the pointer drifts away.
@@ -180,10 +195,14 @@ export default function App() {
     invoke<boolean>("get_autostart").then(setAutostart).catch(() => {});
 
     const unlistenSessions = listen<AgentSession[]>("sessions-updated", (e) => {
+      const seen = new Map<string, string>();
       for (const s of e.payload) {
+        seen.set(s.session_id, s.status);
+        if (lastStatuses.current.get(s.session_id) === s.status) continue;
         const cue = cueForStatus(s.status);
         if (cue) playCue(cue, `${s.session_id}:${s.status}`);
       }
+      lastStatuses.current = seen;
       setSessions(sortSessions(e.payload));
     });
     const unlistenPermReq = listen<PermissionRequest>("permission-requested", (e) => {
@@ -238,6 +257,16 @@ export default function App() {
     sessions.some((s) => s.status === "waiting_permission" || s.status === "error");
   const activeCount = sessions.filter((s) => !isFinished(s.status)).length;
 
+  // Ageing out happens here rather than in the backend: the panel already
+  // re-renders on a timer for the elapsed counters, so the rows drop off on
+  // their own, and the session stays in history in case the agent resumes.
+  const visibleSessions = sessions.filter(
+    (s) => !isExpired(s, settings?.hide_finished_after_minutes ?? 0),
+  );
+  const clearableCount = visibleSessions.filter(
+    (s) => isFinished(s.status) && !s.question,
+  ).length;
+
   const respond = useCallback(async (id: string, decision: "allow" | "deny") => {
     await invoke("respond_permission", { id, decision });
   }, []);
@@ -245,6 +274,14 @@ export default function App() {
   const jump = useCallback(async (pid: number | null | undefined) => {
     if (!pid) return;
     await invoke("focus_terminal", { pid });
+  }, []);
+
+  const dismiss = useCallback(async (sessionId: string) => {
+    await invoke("dismiss_session", { sessionId }).catch(() => {});
+  }, []);
+
+  const clearFinished = useCallback(async () => {
+    await invoke("clear_finished").catch(() => {});
   }, []);
 
   async function applyApprovalMode(enabled: boolean) {
@@ -351,11 +388,11 @@ export default function App() {
             </div>
           ))}
 
-          {sessions.length === 0 && permissions.length === 0 && (
+          {visibleSessions.length === 0 && permissions.length === 0 && (
             <div className="empty">{t("noAgents")}</div>
           )}
 
-          {sessions.map((s) => (
+          {visibleSessions.map((s) => (
             <div key={s.session_id} className={`session-block ${isFinished(s.status) ? "past" : ""}`}>
               <div
                 className="session-row"
@@ -380,6 +417,20 @@ export default function App() {
                   )}
                   <span className="elapsed">{elapsed(s.updated_at)}</span>
                 </div>
+                {isFinished(s.status) && (
+                  <button
+                    className="session-dismiss"
+                    title={t("dismiss")}
+                    // The row itself jumps to the terminal, so this must not
+                    // bubble — dismissing should never yank focus elsewhere.
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void dismiss(s.session_id);
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
 
               {s.question && (
@@ -440,6 +491,15 @@ export default function App() {
             {confirmApproval && !approvalMode && (
               <button className="control-toggle confirm" onClick={() => applyApprovalMode(true)}>
                 {t("turnOn")}
+              </button>
+            )}
+            {clearableCount > 0 && (
+              <button
+                className="control-toggle"
+                onClick={() => void clearFinished()}
+                title={t("clearFinished")}
+              >
+                {t("clearFinished")}
               </button>
             )}
             <button className="control-toggle" onClick={toggleMute} title={t("sound")}>
@@ -548,6 +608,25 @@ export default function App() {
                 />
                 <span className="setting-value">
                   {settings.stall_after_minutes === 0 ? t("none") : `${settings.stall_after_minutes}${t("minutesShort")}`}
+                </span>
+              </label>
+
+              <label className="setting-row">
+                <span className="setting-label">{t("hideFinishedAfter")}</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={60}
+                  step={5}
+                  value={settings.hide_finished_after_minutes}
+                  onChange={(e) =>
+                    updateSettings({ hide_finished_after_minutes: Number(e.target.value) })
+                  }
+                />
+                <span className="setting-value">
+                  {settings.hide_finished_after_minutes === 0
+                    ? t("keep")
+                    : `${settings.hide_finished_after_minutes}${t("minutesShort")}`}
                 </span>
               </label>
 

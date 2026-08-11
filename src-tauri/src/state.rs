@@ -83,6 +83,10 @@ pub struct Settings {
     /// Flag a "running" session as stalled after this many minutes with no
     /// update. Zero disables the check.
     pub stall_after_minutes: u32,
+    /// Stop showing a finished session this many minutes after it ended. Zero
+    /// keeps them listed until dismissed. Sessions still owed an answer are
+    /// never hidden by this — see `AgentSession::needs_attention`.
+    pub hide_finished_after_minutes: u32,
 }
 
 impl Default for Settings {
@@ -96,6 +100,7 @@ impl Default for Settings {
             hotkey: "Alt+Shift+V".into(),
             usage_alert_at: vec![80, 95],
             stall_after_minutes: 20,
+            hide_finished_after_minutes: 5,
         }
     }
 }
@@ -186,5 +191,76 @@ pub fn prune_history(sessions: &mut HashMap<String, AgentSession>) {
     finished.sort_by_key(|(_, updated_at)| *updated_at);
     for (id, _) in finished.iter().take(finished.len() - HISTORY_LIMIT) {
         sessions.remove(id);
+    }
+}
+
+/// Drops every finished session the user has nothing left to do with, and
+/// returns how many went. A session still holding a question survives: it is
+/// finished, but losing it would take the question with it, and the user asked
+/// to clear clutter — not to throw away something they still have to answer.
+pub fn clear_finished(sessions: &mut HashMap<String, AgentSession>) -> usize {
+    let before = sessions.len();
+    sessions.retain(|_, s| s.is_active() || s.needs_attention());
+    before - sessions.len()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn session(id: &str, status: &str, question: bool) -> AgentSession {
+        AgentSession {
+            session_id: id.into(),
+            tool: "claude".into(),
+            label: None,
+            status: status.into(),
+            message: None,
+            terminal: None,
+            question: question.then(|| QuestionInfo {
+                header: None,
+                text: "which one?".into(),
+                options: vec!["a".into()],
+            }),
+            updated_at: 0,
+        }
+    }
+
+    fn map(list: Vec<AgentSession>) -> HashMap<String, AgentSession> {
+        list.into_iter()
+            .map(|s| (s.session_id.clone(), s))
+            .collect()
+    }
+
+    #[test]
+    fn clears_plain_finished_sessions() {
+        let mut sessions = map(vec![
+            session("done", "done", false),
+            session("closed", "closed", false),
+        ]);
+        assert_eq!(clear_finished(&mut sessions), 2);
+        assert!(sessions.is_empty());
+    }
+
+    #[test]
+    fn keeps_running_sessions() {
+        let mut sessions = map(vec![
+            session("live", "running", false),
+            session("old", "done", false),
+        ]);
+        assert_eq!(clear_finished(&mut sessions), 1);
+        assert!(sessions.contains_key("live"));
+    }
+
+    /// The important one: a session cut short mid-question is "closed", so a
+    /// naive status check would sweep away the very thing the user still has to
+    /// answer.
+    #[test]
+    fn keeps_finished_sessions_that_still_hold_a_question() {
+        let mut sessions = map(vec![
+            session("asked", "closed", true),
+            session("plain", "closed", false),
+        ]);
+        assert_eq!(clear_finished(&mut sessions), 1);
+        assert!(sessions.contains_key("asked"));
     }
 }
