@@ -142,11 +142,11 @@ const CASES = [
     args: ["scripts/hook-codex.mjs"],
     argv2: JSON.stringify({
       type: "agent-turn-complete",
-      "conversation-id": "c1",
+      "thread-id": "thread-c1",
       cwd: "C:\\x\\demo",
       "last-assistant-message": "done",
     }),
-    expect: (e) => e.tool === "codex" && e.status === "waiting_input",
+    expect: (e) => e.tool === "codex" && e.status === "done" && e.session_id === "codex-thread-c1",
   },
   {
     name: "codex missing conversation ID stays off the per-turn ID",
@@ -159,7 +159,7 @@ const CASES = [
     }),
     expect: (e) =>
       e.tool === "codex" &&
-      e.status === "waiting_input" &&
+      e.status === "done" &&
       e.session_id.startsWith("codex-pid-") &&
       !e.session_id.includes("turn-that-must-not-create-a-row"),
   },

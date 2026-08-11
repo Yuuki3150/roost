@@ -3,7 +3,7 @@
 //
 // Codex's `notify` config runs one program and appends a single JSON string as
 // the last argument (not stdin). It only fires on turn boundaries, so the
-// granularity here is "finished / waiting", not per-tool-call.
+// granularity here is "finished", not per-tool-call.
 //
 // Codex chains a previously configured notify target itself via
 // `--previous-notify`, so this script does not need to forward anything.
@@ -34,11 +34,16 @@ function main() {
 
   // A turn ID is deliberately not a fallback here: it changes after every
   // turn, which made one Codex conversation appear as a new Roost row each
-  // time. Codex normally supplies a conversation ID. Older/partial notify
-  // payloads don't, so keep those grouped by the long-lived Codex process
-  // instead. A terminal process hosts one active Codex chat at a time.
+  // time. Codex's notify payload calls its stable chat identifier `thread-id`
+  // (some versions use a conversation/session alias), so prefer every stable
+  // form before falling back to a process-local ID.
   const sessionId =
-    payload["conversation-id"] || payload.conversation_id || payload.session_id || `pid-${process.ppid}`;
+    payload["thread-id"] ||
+    payload.thread_id ||
+    payload["conversation-id"] ||
+    payload.conversation_id ||
+    payload.session_id ||
+    `pid-${process.ppid}`;
   const cwd = payload.cwd || payload.cwd_path;
 
   const base = {
@@ -52,8 +57,11 @@ function main() {
   if (payload.type === "agent-turn-complete") {
     postEvent({
       ...base,
-      status: "waiting_input",
-      message: truncate(payload["last-assistant-message"], 80) || s("waiting"),
+      // This is emitted after Codex has completed its turn. It does not mean
+      // Codex is asking the user a question, so showing "waiting" here is
+      // misleading and also keeps the row in the attention state.
+      status: "done",
+      message: truncate(payload["last-assistant-message"], 80) || s("done"),
     });
   } else {
     postEvent({ ...base, status: "running", message: truncate(payload.type, 60) });

@@ -93,9 +93,9 @@ npm run tauri dev
 
 ## Codex CLI 連携
 
-`~/.codex/config.toml` の `notify` を `["node", "<...>/scripts/hook-codex.mjs"]` に向ける。Codexの `notify` はターン終了時（`agent-turn-complete`）にしか飛ばないため、Claude Codeほど細かい途中経過（PreToolUseレベル）は拾えず、「実行完了・入力待ち」の粒度になる。
+`~/.codex/config.toml` の `notify` を `["node", "<...>/scripts/hook-codex.mjs"]` に向ける。Codexの `notify` はターン終了時（`agent-turn-complete`）にしか飛ばないため、Claude Codeほど細かい途中経過（PreToolUseレベル）は拾えず、完了時の状態のみを表示する。`agent-turn-complete` はユーザーへの質問ではないため、「入力待ち」にはしない。
 
-`notify` には1プログラムしか登録できないが、OpenAI純正のcompanion（computer-use）が入っている環境では、Codex側が `--previous-notify` で既存の通知先を自動的にチェーンしてくれる。つまり companion → こちらのスクリプト、の順で呼ばれる。**こちらから companion を呼び返してはいけない**（無限ループになる）。通知に会話IDが欠ける場合も、ターンIDではなくCodexプロセス単位でまとめるため、同じチャットがターンごとに別の行として増えない。
+`notify` には1プログラムしか登録できないが、OpenAI純正のcompanion（computer-use）が入っている環境では、Codex側が `--previous-notify` で既存の通知先を自動的にチェーンしてくれる。つまり companion → こちらのスクリプト、の順で呼ばれる。**こちらから companion を呼び返してはいけない**（無限ループになる）。通知の安定したチャットID（`thread-id`）で行をまとめるため、同じチャットがターンごとに別の行として増えない。
 
 ## Cursor 連携
 
