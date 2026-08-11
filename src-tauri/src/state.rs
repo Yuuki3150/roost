@@ -33,6 +33,8 @@ pub struct AgentSession {
     pub message: Option<String>,
     pub terminal: Option<TerminalRef>,
     pub question: Option<QuestionInfo>,
+    #[serde(default)]
+    pub is_background: bool,
     pub updated_at: u64,
 }
 
@@ -221,6 +223,7 @@ mod tests {
                 text: "which one?".into(),
                 options: vec!["a".into()],
             }),
+            is_background: false,
             updated_at: 0,
         }
     }

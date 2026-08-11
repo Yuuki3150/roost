@@ -95,9 +95,11 @@ npm run tauri dev
 
 `~/.codex/config.toml` の `notify` を `["node", "<...>/scripts/hook-codex.mjs"]` に向ける。Codexの `notify` はターン終了時（`agent-turn-complete`）にしか飛ばないため、Claude Codeほど細かい途中経過（PreToolUseレベル）は拾えず、「実行完了・入力待ち」の粒度になる。
 
-`notify` には1プログラムしか登録できないが、OpenAI純正のcompanion（computer-use）が入っている環境では、Codex側が `--previous-notify` で既存の通知先を自動的にチェーンしてくれる。つまり companion → こちらのスクリプト、の順で呼ばれる。**こちらから companion を呼び返してはいけない**（無限ループになる）。
+`notify` には1プログラムしか登録できないが、OpenAI純正のcompanion（computer-use）が入っている環境では、Codex側が `--previous-notify` で既存の通知先を自動的にチェーンしてくれる。つまり companion → こちらのスクリプト、の順で呼ばれる。**こちらから companion を呼び返してはいけない**（無限ループになる）。通知に会話IDが欠ける場合も、ターンIDではなくCodexプロセス単位でまとめるため、同じチャットがターンごとに別の行として増えない。
 
 ## Cursor 連携
+
+Codexがバックグラウンドタスクであることを通知したセッションには、行名の横に **「バックグラウンド」** バッジを表示する。
 
 `scripts/cursor-hooks.snippet.json` を `~/.cursor/hooks.json`（ユーザー全体）か `<project>/.cursor/hooks.json` に置く。既に `hooks.json` がある場合は `hooks` の中身だけマージする。Cursorは保存を監視して自動リロードする（効かないときは再起動）。
 

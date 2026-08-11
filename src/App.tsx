@@ -19,6 +19,7 @@ type AgentSession = {
   message: string | null;
   terminal: { app: string | null; pid: number | null; window_title: string | null } | null;
   question: QuestionInfo | null;
+  is_background: boolean;
   updated_at: number;
 };
 
@@ -404,7 +405,10 @@ export default function App() {
                   style={{ background: toolColor(s.tool) }}
                 />
                 <div className="session-main">
-                  <div className="session-label">{s.label ?? s.session_id}</div>
+                  <div className="session-label">
+                    {s.label ?? s.session_id}
+                    {s.is_background && <span className="background-task">{t("backgroundTask")}</span>}
+                  </div>
                   <div className="session-message">{s.message ?? statusLabel(s.status)}</div>
                 </div>
                 <div className="session-meta">

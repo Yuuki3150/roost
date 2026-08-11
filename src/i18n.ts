@@ -5,6 +5,7 @@
 const JA = navigator.language?.toLowerCase().startsWith("ja") ?? false;
 
 const STRINGS = {
+  backgroundTask: ["background", "バックグラウンド"],
   idle: ["Roost", "Roost"],
   noAgents: ["No agents running", "エージェントは動いていません"],
 

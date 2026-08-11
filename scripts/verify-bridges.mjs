@@ -148,6 +148,32 @@ const CASES = [
     }),
     expect: (e) => e.tool === "codex" && e.status === "waiting_input",
   },
+  {
+    name: "codex missing conversation ID stays off the per-turn ID",
+    args: ["scripts/hook-codex.mjs"],
+    argv2: JSON.stringify({
+      type: "agent-turn-complete",
+      "turn-id": "turn-that-must-not-create-a-row",
+      cwd: "C:\\x\\demo",
+      "last-assistant-message": "done",
+    }),
+    expect: (e) =>
+      e.tool === "codex" &&
+      e.status === "waiting_input" &&
+      e.session_id.startsWith("codex-pid-") &&
+      !e.session_id.includes("turn-that-must-not-create-a-row"),
+  },
+  {
+    name: "codex background task is marked",
+    args: ["scripts/hook-codex.mjs"],
+    argv2: JSON.stringify({
+      type: "agent-turn-complete",
+      "conversation-id": "background-chat",
+      thread_source: "background",
+      cwd: "C:\\x\\demo",
+    }),
+    expect: (e) => e.tool === "codex" && e.is_background === true,
+  },
 ];
 
 let failures = 0;

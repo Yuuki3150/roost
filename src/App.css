@@ -161,6 +161,20 @@ body,
   text-overflow: ellipsis;
 }
 
+.background-task {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: rgba(110, 160, 255, 0.18);
+  color: #9ec0ff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
+  vertical-align: 1px;
+}
+
 .session-message {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.5);

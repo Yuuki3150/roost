@@ -129,6 +129,7 @@ fn handle_event(body: &str, app: &AppHandle, state: &Arc<AppState>) -> (u16, ser
         message: Option<String>,
         terminal: Option<crate::state::TerminalRef>,
         question: Option<crate::state::QuestionInfo>,
+        is_background: Option<bool>,
     }
 
     let parsed: Result<EventBody, _> = serde_json::from_str(body);
@@ -145,6 +146,7 @@ fn handle_event(body: &str, app: &AppHandle, state: &Arc<AppState>) -> (u16, ser
         message: parsed.message,
         terminal: parsed.terminal,
         question: parsed.question,
+        is_background: parsed.is_background.unwrap_or(false),
         updated_at: now_ms(),
     };
 
@@ -173,6 +175,12 @@ fn handle_event(body: &str, app: &AppHandle, state: &Arc<AppState>) -> (u16, ser
                 if prev.status == "waiting_input" {
                     session.question = prev.question.clone();
                 }
+            }
+        }
+
+        if !session.is_background {
+            if let Some(prev) = sessions.get(&parsed.session_id) {
+                session.is_background = prev.is_background;
             }
         }
 
